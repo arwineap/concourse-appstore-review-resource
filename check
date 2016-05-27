@@ -1,0 +1,53 @@
+#!/usr/local/bin/ruby
+
+require 'digest'
+require 'json'
+require 'nokogiri'
+require 'net/http'
+
+def get_reviews(app_id)
+    uri = URI("https://itunes.apple.com/us/rss/customerreviews/id=#{app_id}/sortBy=mostRecent/xml")
+    doc = Nokogiri::XML(Net::HTTP.get(uri))
+
+    reviews = Array.new
+
+    doc.css("entry").each_with_index do |node, i|
+        if i == 0
+            next
+        end
+        review = Hash.new
+        review[:author] = node.at_css('author/name').text
+        review[:title] = node.at_css('title').text
+        review[:content] = node.at_css('content').text
+        review[:updated] = node.at_css('updated').text
+        review[:rating] = node.children.select { |x| x.name == "rating" }[0].text
+        if review != {}
+            reviews.push(review)
+        end
+    end
+    return reviews
+end
+
+inp = ''
+inp += $stdin.read
+payload = JSON.parse(inp.to_s)
+result = Array.new
+
+reviews = get_reviews(payload['source']['app_id'])
+
+sha256 = Digest::SHA256.new
+
+if payload['version'].eql? nil
+    ref = "#{reviews.first[:author]} - #{reviews.first[:rating]} - #{sha256.hexdigest(reviews.first[:author]+reviews.first[:rating].to_s+reviews.first[:title]+reviews.first[:content]+reviews.first[:updated])}"
+    result.push({"ref": ref})
+else
+    app.reviews.each do |x|
+        ref = "#{x[:author]} - #{x[:rating]} - #{sha256.hexdigest(x[:author]+x[:rating].to_s+x[:title]+x[:content]+x[:updated])}"
+        if ref == payload['version']['ref']
+            break
+        end
+        result.push({"ref": ref})
+    end
+end
+
+puts result.to_json

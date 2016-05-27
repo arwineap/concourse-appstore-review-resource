@@ -1,0 +1,72 @@
+#!/usr/local/bin/ruby
+
+require 'digest'
+require 'json'
+require 'erb'
+require 'net/http'
+require 'nokogiri'
+
+inp = ''
+inp += $stdin.read
+
+payload = JSON.parse(inp.to_s)
+dest_dir = ARGV[0]
+review = nil
+
+def get_reviews(app_id)
+    uri = URI("https://itunes.apple.com/us/rss/customerreviews/id=#{app_id}/sortBy=mostRecent/xml")
+    doc = Nokogiri::XML(Net::HTTP.get(uri))
+
+    reviews = Array.new
+
+    doc.css("entry").each_with_index do |node, i|
+        if i == 0
+            next
+        end
+        review = Hash.new
+        review[:author] = node.at_css('author/name').text
+        review[:title] = node.at_css('title').text
+        review[:content] = node.at_css('content').text
+        review[:updated] = node.at_css('updated').text
+        review[:rating] = node.children.select { |x| x.name == "rating" }[0].text
+        if review != {}
+            reviews.push(review)
+        end
+    end
+    return reviews
+end
+
+reviews = get_reviews(payload['source']['app_id'])
+
+sha256 = Digest::SHA256.new
+
+reviews.each do |x|
+    ref = "#{x[:author]} - #{x[:rating]} - #{sha256.hexdigest(x[:author]+x[:rating].to_s+x[:title]+x[:content]+x[:updated])}"
+    if ref == payload['version']['ref']
+        review = x
+        break
+    end
+end
+
+# write the json review file
+File.open("#{dest_dir}/review.json", "w") do |f|
+    f.write(review.to_json)
+end
+
+# write a slack message for slack resource
+File.open("#{dest_dir}/slack.msg", "w") do |f|
+    template = ERB.new(File.read("/opt/resource/slack.erb"))
+    f.write template.result()
+end
+
+
+# setup and configure metadata
+json_result = Hash.new
+json_result["version"] = {"ref": payload['version']['ref']}
+json_result["metadata"] = Array.new
+json_result["metadata"].push({"name" => "author", "value" => review[:author]})
+json_result["metadata"].push({"name" => "score", "value" => review[:rating]})
+json_result["metadata"].push({"name" => "title", "value" => review[:title]})
+json_result["metadata"].push({"name" => "text", "value" => review[:content]})
+
+puts json_result.to_json
