@@ -41,7 +41,7 @@ if payload['version'].eql? nil
     ref = "#{reviews.first[:author]} - #{reviews.first[:rating]} - #{sha256.hexdigest(reviews.first[:author]+reviews.first[:rating].to_s+reviews.first[:title]+reviews.first[:content]+reviews.first[:updated])}"
     result.push({"ref": ref})
 else
-    app.reviews.each do |x|
+    reviews.each do |x|
         ref = "#{x[:author]} - #{x[:rating]} - #{sha256.hexdigest(x[:author]+x[:rating].to_s+x[:title]+x[:content]+x[:updated])}"
         if ref == payload['version']['ref']
             break
