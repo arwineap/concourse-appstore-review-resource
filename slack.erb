@@ -1,3 +1,3 @@
-<%= review[:author] %>     <% review[:rating].to_i.times do |x| %>:star:<% end %>
+_<%= review[:author] %>_     <% review[:rating].to_i.times do |x| %>:star:<% end %>
 *<% if review[:title].empty? %>no title<% else %><%= review[:title] %><% end %>*
 >>><%= review[:content] %>
