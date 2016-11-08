@@ -55,8 +55,12 @@ end
 
 # write a slack message for slack resource
 File.open("#{dest_dir}/slack.msg", "w") do |f|
-    template = ERB.new(File.read("/opt/resource/slack.erb"))
-    f.write template.result()
+    begin
+        template = ERB.new(File.read("/opt/resource/slack.erb"))
+        f.write template.result()
+    rescue NoMethodError
+        puts review.inspect
+    end
 end
 
 
