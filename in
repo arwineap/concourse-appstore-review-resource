@@ -66,11 +66,14 @@ end
 
 # setup and configure metadata
 json_result = Hash.new
-json_result["version"] = {"ref": payload['version']['ref']}
-json_result["metadata"] = Array.new
-json_result["metadata"].push({"name" => "author", "value" => review[:author]})
-json_result["metadata"].push({"name" => "score", "value" => review[:rating]})
-json_result["metadata"].push({"name" => "title", "value" => review[:title]})
-json_result["metadata"].push({"name" => "text", "value" => review[:content]})
-
-puts json_result.to_json
+begin
+    json_result["version"] = {"ref": payload['version']['ref']}
+    json_result["metadata"] = Array.new
+    json_result["metadata"].push({"name" => "author", "value" => review[:author]})
+    json_result["metadata"].push({"name" => "score", "value" => review[:rating]})
+    json_result["metadata"].push({"name" => "title", "value" => review[:title]})
+    json_result["metadata"].push({"name" => "text", "value" => review[:content]})
+    puts json_result.to_json
+rescue NoMethodError
+    puts review.inspect
+end
